@@ -1,6 +1,8 @@
 use std::error::Error;
 
-use evee::{Application, event::event::ApplicationEvent::WindowResizeEvent, info};
+use evee::core::{
+    Application, Evee, event::event::ApplicationEvent::WindowResizeEvent, info, window::Window,
+};
 
 struct MyApplication;
 
@@ -13,6 +15,10 @@ impl Application for MyApplication {
             event.to_string()
         );
     }
+
+    fn create_window(&self) -> Result<Box<dyn Window>, Box<dyn std::error::Error>> {
+        todo!()
+    }
 }
 
 impl MyApplication {
@@ -23,8 +29,9 @@ impl MyApplication {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let app = Box::new(MyApplication::new());
+    let mut evee = Evee::new(app)?;
 
-    evee::run(app)?;
+    evee.run()?;
 
     Ok(())
 }

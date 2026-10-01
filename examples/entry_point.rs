@@ -1,12 +1,16 @@
 use std::error::Error;
 
-use evee::{Application, info};
+use evee::core::{Application, Evee, info, window::Window};
 
 struct MyApplication;
 
 impl Application for MyApplication {
     fn run(&self) {
         info!("Evee Engine");
+    }
+
+    fn create_window(&self) -> Result<Box<dyn Window>, Box<dyn std::error::Error>> {
+        todo!();
     }
 }
 
@@ -18,8 +22,9 @@ impl MyApplication {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let app = Box::new(MyApplication::new());
+    let mut evee = Evee::new(app)?;
 
-    evee::run(app)?;
+    evee.run()?;
 
     Ok(())
 }
