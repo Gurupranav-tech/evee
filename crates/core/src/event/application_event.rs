@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ApplicationEvent {
     WindowResizeEvent(u32, u32),
     WindowCloseEvent,

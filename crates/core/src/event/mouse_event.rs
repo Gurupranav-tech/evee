@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MouseEvent {
     // x, y
     MouseMoveEvent(u32, u32),

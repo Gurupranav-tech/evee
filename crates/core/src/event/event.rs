@@ -2,7 +2,7 @@ pub use crate::event::{
     application_event::ApplicationEvent, key_event::KeyEvent, mouse_event::MouseEvent,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EventCategory {
     None,
     EventCategoryApplication(ApplicationEvent),

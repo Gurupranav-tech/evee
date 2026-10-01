@@ -1,5 +1,5 @@
 use evee::core::{
-    Application, Evee, info,
+    Application, Evee,
     window::{Window, WindowProps},
 };
 use evee::window::glfw_window::GLFWWindow;
@@ -35,7 +35,7 @@ impl MyApplication {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let app = Box::new(MyApplication::new(800, 600, "Evee Sandbox".to_string()));
-    let mut evee = Evee::new(app)?;
+    let mut evee = Evee::new(app)?.init();
 
     evee.run()?;
 

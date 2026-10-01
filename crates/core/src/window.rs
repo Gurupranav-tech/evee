@@ -16,7 +16,7 @@ pub trait Window {
     fn get_width(&self) -> u32;
     fn get_height(&self) -> u32;
 
-    fn set_event_callback(&mut self, callback: Box<dyn FnMut(&EventCategory)>);
+    fn set_event_callback(&mut self, callback: Box<dyn FnMut(EventCategory)>);
     fn set_vsync(&mut self, enabled: bool);
     fn is_vsync(&self) -> bool;
 }

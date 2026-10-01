@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum KeyEvent {
     // key_code, repeat_count
     KeyPressedEvent(u32, u32),

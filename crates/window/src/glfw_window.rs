@@ -10,7 +10,7 @@ use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
 pub struct GLFWWindow {
     window_props: WindowProps,
     vsync: bool,
-    event_callback: Option<Box<dyn FnMut(&EventCategory)>>,
+    event_callback: Option<Box<dyn FnMut(EventCategory)>>,
 
     // GLFW specific handles
     glfw: Glfw,
@@ -35,6 +35,11 @@ impl Window for GLFWWindow {
         window.make_current();
         window.set_key_polling(true);
         window.set_size_polling(true);
+        window.set_framebuffer_size_polling(true);
+        window.set_close_polling(true);
+        window.set_cursor_pos_polling(true);
+        window.set_mouse_button_polling(true);
+        window.set_focus_polling(true);
 
         info!(
             "Created GLFW Window: {} {}x{}",
@@ -59,7 +64,11 @@ impl Window for GLFWWindow {
         self.glfw.poll_events();
 
         for (_, event) in glfw::flush_messages(&self.events) {
-            if let Some(callback) = self.event_callback.as_mut() {}
+            if let Some(evee_event) = self.translate(event) {
+                if let Some(callback) = self.event_callback.as_mut() {
+                    callback(evee_event);
+                }
+            }
         }
 
         self.window.swap_buffers();
@@ -73,7 +82,7 @@ impl Window for GLFWWindow {
         self.window_props.height
     }
 
-    fn set_event_callback(&mut self, callback: Box<dyn FnMut(&core::event::event::EventCategory)>) {
+    fn set_event_callback(&mut self, callback: Box<dyn FnMut(core::event::event::EventCategory)>) {
         self.event_callback = Some(callback);
     }
 
@@ -88,5 +97,16 @@ impl Window for GLFWWindow {
 
     fn is_vsync(&self) -> bool {
         self.vsync
+    }
+}
+
+impl GLFWWindow {
+    fn translate(&self, event: glfw::WindowEvent) -> Option<EventCategory> {
+        match event {
+            glfw::WindowEvent::Close => Some(EventCategory::EventCategoryApplication(
+                core::event::event::ApplicationEvent::WindowCloseEvent,
+            )),
+            _ => None,
+        }
     }
 }
