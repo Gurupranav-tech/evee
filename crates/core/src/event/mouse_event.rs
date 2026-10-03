@@ -1,8 +1,8 @@
 #[derive(Debug, Clone)]
 pub enum MouseEvent {
     // x, y
-    MouseMoveEvent(u32, u32),
-    MouseScrollEvent(u32, u32),
+    MouseMoveEvent(f32, f32),
+    MouseScrollEvent(f32, f32),
     // Mouse Button
     MouseButtonPressedEvent(u32),
     MouseButtonReleaseEvent(u32),

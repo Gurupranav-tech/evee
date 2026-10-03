@@ -1,21 +1,34 @@
 use crate::{
     event::event::{ApplicationEvent, EventCategory},
+    layer_stack::{Layer, LayerStack},
     logger::init_logger,
     window::Window,
 };
 use std::{error::Error, sync::mpsc};
 
 pub trait Application {
-    fn run(&self);
     fn create_window(&self) -> Result<Box<dyn Window>, Box<dyn Error>>;
+
+    fn create_layers(&self) -> Vec<Box<dyn Layer>> {
+        vec![]
+    }
+
+    fn create_overlays(&self) -> Vec<Box<dyn Layer>> {
+        vec![]
+    }
 }
 
 pub struct Evee {
     app: Box<dyn Application>,
     running: bool,
+
+    // Window events
     window: Box<dyn Window>,
     event_sender: mpsc::Sender<EventCategory>,
     event_receiver: mpsc::Receiver<EventCategory>,
+
+    // Layer Stack
+    layer_stack: LayerStack,
 }
 
 impl Evee {
@@ -32,17 +45,21 @@ impl Evee {
             running: true,
             event_receiver,
             event_sender,
+            layer_stack: LayerStack::new(),
         })
     }
 
-    pub fn window_event(&mut self) {
-        while let Ok(event_category) = self.event_receiver.try_recv() {
-            tracing::info!("Received event: {:?}", event_category);
+    fn window_event(&mut self) {
+        while let Ok(mut event_category) = self.event_receiver.try_recv() {
             match event_category {
                 EventCategory::EventCategoryApplication(ApplicationEvent::WindowCloseEvent) => {
                     self.running = false
                 }
-                _ => {}
+                _ => {
+                    for layer in self.layer_stack.layers.iter_mut().rev() {
+                        layer.on_event(&mut event_category);
+                    }
+                }
             }
         }
     }
@@ -50,11 +67,20 @@ impl Evee {
     pub fn init(mut self) -> Self {
         let sender = self.event_sender.clone();
 
+        for layer in self.app.create_layers() {
+            self.layer_stack.push_layer(layer);
+        }
+
+        for overlay in self.app.create_overlays() {
+            self.layer_stack.push_overlay(overlay);
+        }
+
         (&mut self)
             .window
             .set_event_callback(Box::new(move |event_category: EventCategory| {
                 sender.send(event_category).expect("Event System broken");
             }));
+
         self
     }
 
@@ -63,7 +89,9 @@ impl Evee {
             self.window.on_update();
             self.window_event();
 
-            self.app.run();
+            for layer in &mut self.layer_stack.layers {
+                layer.on_update();
+            }
         }
 
         Ok(())

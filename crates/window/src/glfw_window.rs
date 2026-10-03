@@ -65,6 +65,13 @@ impl Window for GLFWWindow {
 
         for (_, event) in glfw::flush_messages(&self.events) {
             if let Some(evee_event) = self.translate(event) {
+                if let EventCategory::EventCategoryApplication(
+                    core::event::event::ApplicationEvent::WindowResizeEvent(width, height),
+                ) = &evee_event
+                {
+                    self.window_props.width = *width;
+                    self.window_props.height = *height;
+                }
                 if let Some(callback) = self.event_callback.as_mut() {
                     callback(evee_event);
                 }
@@ -105,6 +112,42 @@ impl GLFWWindow {
         match event {
             glfw::WindowEvent::Close => Some(EventCategory::EventCategoryApplication(
                 core::event::event::ApplicationEvent::WindowCloseEvent,
+            )),
+            glfw::WindowEvent::Size(width, height) => {
+                Some(EventCategory::EventCategoryApplication(
+                    core::event::event::ApplicationEvent::WindowResizeEvent(
+                        width as u32,
+                        height as u32,
+                    ),
+                ))
+            }
+            glfw::WindowEvent::Key(key, _scancode, action, _modifiers) => match action {
+                glfw::Action::Press => Some(EventCategory::EventCategoryKeyboard(
+                    core::event::event::KeyEvent::KeyPressedEvent(key as u32, 0),
+                )),
+                glfw::Action::Release => Some(EventCategory::EventCategoryKeyboard(
+                    core::event::event::KeyEvent::KeyReleaseEvent(key as u32),
+                )),
+                glfw::Action::Repeat => Some(EventCategory::EventCategoryKeyboard(
+                    core::event::event::KeyEvent::KeyPressedEvent(key as u32, 1),
+                )),
+            },
+            glfw::WindowEvent::MouseButton(button, action, _mods) => match action {
+                glfw::Action::Press => Some(EventCategory::EventCategoryMouse(
+                    core::event::event::MouseEvent::MouseButtonPressedEvent(button as u32),
+                )),
+                glfw::Action::Release => Some(EventCategory::EventCategoryMouse(
+                    core::event::event::MouseEvent::MouseButtonReleaseEvent(button as u32),
+                )),
+                glfw::Action::Repeat => Some(EventCategory::EventCategoryMouse(
+                    core::event::event::MouseEvent::MouseButtonPressedEvent(button as u32),
+                )),
+            },
+            glfw::WindowEvent::Scroll(off_x, off_y) => Some(EventCategory::EventCategoryMouse(
+                core::event::event::MouseEvent::MouseScrollEvent(off_x as f32, off_y as f32),
+            )),
+            glfw::WindowEvent::CursorPos(x, y) => Some(EventCategory::EventCategoryMouse(
+                core::event::event::MouseEvent::MouseMoveEvent(x as f32, y as f32),
             )),
             _ => None,
         }
