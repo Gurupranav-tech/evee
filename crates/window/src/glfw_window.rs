@@ -1,11 +1,13 @@
 use core::{
+    GPUContext,
     event::event::EventCategory,
-    info,
+    info, warn,
     window::{Window, WindowProps},
 };
 use std::error::Error;
 
-use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
+use glfw::{Glfw, GlfwReceiver, PWindow, WindowEvent};
+use renderer::OpenglContext;
 
 pub struct GLFWWindow {
     window_props: WindowProps,
@@ -32,7 +34,6 @@ impl Window for GLFWWindow {
                 glfw::WindowMode::Windowed,
             )
             .ok_or("Cannot create a GLFW Window")?;
-        window.make_current();
         window.set_key_polling(true);
         window.set_size_polling(true);
         window.set_framebuffer_size_polling(true);
@@ -42,16 +43,17 @@ impl Window for GLFWWindow {
         window.set_focus_polling(true);
 
         info!(
-            "Created GLFW Window: {} {}x{}",
-            props.title, props.width, props.height
+            "Created GLFW Window: {} {}x{} with context {:?}",
+            props.title, props.width, props.height, props.context
         );
 
+        match &props.context {
+            core::GPUContext::Opengl => OpenglContext::create_context(&mut window),
+            core::GPUContext::None => warn!("No GPU Context was choosen"),
+        }
+
         Ok(Box::new(Self {
-            window_props: WindowProps {
-                width: props.width,
-                height: props.height,
-                title: props.title,
-            },
+            window_props: props,
             vsync: false,
             event_callback: None,
             glfw,
@@ -78,7 +80,10 @@ impl Window for GLFWWindow {
             }
         }
 
-        self.window.swap_buffers();
+        match &self.window_props.context {
+            GPUContext::Opengl => OpenglContext::swap_buffers(&mut self.window),
+            GPUContext::None => {}
+        }
     }
 
     fn get_width(&self) -> u32 {

@@ -1,10 +1,11 @@
-use crate::event::event::EventCategory;
+use crate::{GPUContext, event::event::EventCategory};
 use std::error::Error;
 
 pub struct WindowProps {
     pub title: String,
     pub width: u32,
     pub height: u32,
+    pub context: GPUContext,
 }
 
 pub trait Window {

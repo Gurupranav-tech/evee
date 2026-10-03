@@ -1,5 +1,5 @@
 use evee::core::{
-    Application, Evee, Layer, info,
+    Application, Evee, GPUContext, Layer, info,
     window::{Window, WindowProps},
 };
 use evee::window::glfw_window::GLFWWindow;
@@ -35,6 +35,7 @@ impl Application for MyApplication {
             width: self.width,
             height: self.height,
             title: self.title.clone(),
+            context: GPUContext::None,
         })
     }
 

@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 core = { path = "../core" }
 window = { path = "../window" }
+renderer = { path = "../renderer" }

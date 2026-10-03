@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 glfw = "0.55"
 core = { path = "../core" } # Depends on core for events & logging
+renderer = { path = "../renderer" }
