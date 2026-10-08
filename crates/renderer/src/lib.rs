@@ -1,3 +1,3 @@
-mod contexts;
+mod imgui;
 
-pub use contexts::OpenglContext;
+pub use imgui::ImGuiLayer;

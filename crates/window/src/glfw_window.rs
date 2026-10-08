@@ -4,10 +4,10 @@ use core::{
     info, warn,
     window::{Window, WindowProps},
 };
-use std::error::Error;
-
-use glfw::{Glfw, GlfwReceiver, PWindow, WindowEvent};
-use renderer::OpenglContext;
+use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
+use glow::HasContext;
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
+use std::{error::Error, rc::Rc};
 
 pub struct GLFWWindow {
     window_props: WindowProps,
@@ -18,6 +18,25 @@ pub struct GLFWWindow {
     glfw: Glfw,
     window: PWindow,
     events: GlfwReceiver<(f64, WindowEvent)>,
+
+    // Graphics Context
+    gl: Option<Rc<glow::Context>>,
+}
+
+impl HasWindowHandle for GLFWWindow {
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        self.window.window_handle()
+    }
+}
+
+impl HasDisplayHandle for GLFWWindow {
+    fn display_handle(
+        &self,
+    ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+        self.window.display_handle()
+    }
 }
 
 impl Window for GLFWWindow {
@@ -26,6 +45,7 @@ impl Window for GLFWWindow {
         Self: Sized,
     {
         let mut glfw = glfw::init(glfw::fail_on_errors)?;
+
         let (mut window, event) = glfw
             .create_window(
                 props.width,
@@ -34,6 +54,7 @@ impl Window for GLFWWindow {
                 glfw::WindowMode::Windowed,
             )
             .ok_or("Cannot create a GLFW Window")?;
+
         window.set_key_polling(true);
         window.set_size_polling(true);
         window.set_framebuffer_size_polling(true);
@@ -47,19 +68,47 @@ impl Window for GLFWWindow {
             props.title, props.width, props.height, props.context
         );
 
-        match &props.context {
-            core::GPUContext::Opengl => OpenglContext::create_context(&mut window),
-            core::GPUContext::None => warn!("No GPU Context was choosen"),
-        }
-
-        Ok(Box::new(Self {
+        let mut glfw_window = Box::new(Self {
             window_props: props,
             vsync: false,
             event_callback: None,
             glfw,
             window,
             events: event,
-        }))
+            gl: None,
+        });
+
+        match &glfw_window.window_props.context {
+            core::GPUContext::Opengl => {
+                glfw_window.window.make_current();
+
+                let gl = Rc::new(unsafe {
+                    glow::Context::from_loader_function(|symbol| {
+                        glfw_window.window.get_proc_address(symbol) as *const _
+                    })
+                });
+
+                unsafe { gl.enable(glow::DEPTH_TEST) };
+
+                glfw_window.gl = Some(gl);
+            }
+
+            core::GPUContext::None => warn!("No GPU Context was choosen"),
+        };
+
+        Ok(glfw_window)
+    }
+
+    fn window_props(&self) -> &WindowProps {
+        &self.window_props
+    }
+
+    fn window_type(&self) -> &str {
+        "GLFW"
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 
     fn on_update(&mut self) {
@@ -72,16 +121,21 @@ impl Window for GLFWWindow {
                 ) = &evee_event
                 {
                     self.window_props.width = *width;
+
                     self.window_props.height = *height;
                 }
+
                 if let Some(callback) = self.event_callback.as_mut() {
                     callback(evee_event);
                 }
             }
         }
 
-        match &self.window_props.context {
-            GPUContext::Opengl => OpenglContext::swap_buffers(&mut self.window),
+        match self.window_props.context {
+            GPUContext::Opengl => {
+                self.window.swap_buffers();
+            }
+
             GPUContext::None => {}
         }
     }
@@ -104,6 +158,7 @@ impl Window for GLFWWindow {
         } else {
             self.glfw.set_swap_interval(glfw::SwapInterval::None);
         }
+
         self.vsync = enabled;
     }
 
@@ -118,6 +173,7 @@ impl GLFWWindow {
             glfw::WindowEvent::Close => Some(EventCategory::EventCategoryApplication(
                 core::event::event::ApplicationEvent::WindowCloseEvent,
             )),
+
             glfw::WindowEvent::Size(width, height) => {
                 Some(EventCategory::EventCategoryApplication(
                     core::event::event::ApplicationEvent::WindowResizeEvent(
@@ -126,35 +182,48 @@ impl GLFWWindow {
                     ),
                 ))
             }
+
             glfw::WindowEvent::Key(key, _scancode, action, _modifiers) => match action {
                 glfw::Action::Press => Some(EventCategory::EventCategoryKeyboard(
                     core::event::event::KeyEvent::KeyPressedEvent(key as u32, 0),
                 )),
+
                 glfw::Action::Release => Some(EventCategory::EventCategoryKeyboard(
                     core::event::event::KeyEvent::KeyReleaseEvent(key as u32),
                 )),
+
                 glfw::Action::Repeat => Some(EventCategory::EventCategoryKeyboard(
                     core::event::event::KeyEvent::KeyPressedEvent(key as u32, 1),
                 )),
             },
+
             glfw::WindowEvent::MouseButton(button, action, _mods) => match action {
                 glfw::Action::Press => Some(EventCategory::EventCategoryMouse(
                     core::event::event::MouseEvent::MouseButtonPressedEvent(button as u32),
                 )),
+
                 glfw::Action::Release => Some(EventCategory::EventCategoryMouse(
                     core::event::event::MouseEvent::MouseButtonReleaseEvent(button as u32),
                 )),
+
                 glfw::Action::Repeat => Some(EventCategory::EventCategoryMouse(
                     core::event::event::MouseEvent::MouseButtonPressedEvent(button as u32),
                 )),
             },
+
             glfw::WindowEvent::Scroll(off_x, off_y) => Some(EventCategory::EventCategoryMouse(
                 core::event::event::MouseEvent::MouseScrollEvent(off_x as f32, off_y as f32),
             )),
+
             glfw::WindowEvent::CursorPos(x, y) => Some(EventCategory::EventCategoryMouse(
                 core::event::event::MouseEvent::MouseMoveEvent(x as f32, y as f32),
             )),
+
             _ => None,
         }
+    }
+
+    pub fn gl_context(&self) -> Option<Rc<glow::Context>> {
+        self.gl.clone()
     }
 }

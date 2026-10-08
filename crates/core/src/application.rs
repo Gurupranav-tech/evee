@@ -4,12 +4,12 @@ use crate::{
     logger::init_logger,
     window::Window,
 };
-use std::{error::Error, sync::mpsc};
+use std::{cell::RefCell, error::Error, rc::Rc, sync::mpsc};
 
 pub trait Application {
-    fn create_window(&self) -> Result<Box<dyn Window>, Box<dyn Error>>;
+    fn create_window(&mut self) -> Result<Rc<RefCell<Box<dyn Window>>>, Box<dyn Error>>;
 
-    fn create_layers(&self) -> Vec<Box<dyn Layer>> {
+    fn create_layers(&self, _window: Rc<RefCell<Box<dyn Window>>>) -> Vec<Box<dyn Layer>> {
         vec![]
     }
 
@@ -23,7 +23,7 @@ pub struct Evee {
     running: bool,
 
     // Window events
-    window: Box<dyn Window>,
+    window: Rc<RefCell<Box<dyn Window>>>,
     event_sender: mpsc::Sender<EventCategory>,
     event_receiver: mpsc::Receiver<EventCategory>,
 
@@ -32,7 +32,7 @@ pub struct Evee {
 }
 
 impl Evee {
-    pub fn new(app: Box<dyn Application>) -> Result<Self, Box<dyn Error>> {
+    pub fn new(mut app: Box<dyn Application>) -> Result<Self, Box<dyn Error>> {
         init_logger();
 
         let window = app.create_window()?;
@@ -67,7 +67,7 @@ impl Evee {
     pub fn init(mut self) -> Self {
         let sender = self.event_sender.clone();
 
-        for layer in self.app.create_layers() {
+        for layer in self.app.create_layers(Rc::clone(&self.window)) {
             self.layer_stack.push_layer(layer);
         }
 
@@ -75,18 +75,18 @@ impl Evee {
             self.layer_stack.push_overlay(overlay);
         }
 
-        (&mut self)
-            .window
-            .set_event_callback(Box::new(move |event_category: EventCategory| {
+        (&mut self).window.borrow_mut().set_event_callback(Box::new(
+            move |event_category: EventCategory| {
                 sender.send(event_category).expect("Event System broken");
-            }));
+            },
+        ));
 
         self
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         while self.running {
-            self.window.on_update();
+            self.window.borrow_mut().on_update();
             self.window_event();
 
             for layer in &mut self.layer_stack.layers {
