@@ -21,6 +21,9 @@ pub struct ImGuiLayer {
     texture_map: SimpleTextureMap,
     last_frame: Instant,
     gl: Option<Rc<glow::Context>>,
+
+    // callbacks
+    ui_callbacks: Vec<Box<dyn FnMut(&mut imgui::Ui)>>,
 }
 
 impl ImGuiLayer {
@@ -32,6 +35,7 @@ impl ImGuiLayer {
             texture_map: SimpleTextureMap::default(),
             last_frame: Instant::now(),
             gl: None,
+            ui_callbacks: Vec::new(),
         };
 
         imgui_layer
@@ -44,6 +48,12 @@ impl Layer for ImGuiLayer {
 
         let io = imgui.io_mut();
         io.config_flags.insert(imgui::ConfigFlags::DOCKING_ENABLE);
+        io.config_flags.insert(imgui::ConfigFlags::VIEWPORTS_ENABLE);
+        io.config_flags
+            .insert(imgui::ConfigFlags::NAV_ENABLE_GAMEPAD);
+        io.config_flags
+            .insert(imgui::ConfigFlags::NAV_ENABLE_KEYBOARD);
+        io.config_flags.insert(imgui::ConfigFlags::VIEWPORTS_ENABLE);
 
         io.display_size = [
             self.window.borrow().window_props().width as f32,
@@ -106,7 +116,10 @@ impl Layer for ImGuiLayer {
         self.last_frame = now;
 
         let ui = imgui.new_frame();
-        ui.show_demo_window(&mut true);
+
+        for cb in self.ui_callbacks.iter_mut() {
+            cb(ui);
+        }
 
         let draw_data = imgui.render();
         if draw_data.draw_lists_count() > 0 {
@@ -176,6 +189,12 @@ impl Layer for ImGuiLayer {
             },
             _ => {}
         }
+    }
+}
+
+impl ImGuiLayer {
+    pub fn add_ui_callback(&mut self, cb: Box<dyn FnMut(&mut imgui::Ui)>) {
+        self.ui_callbacks.push(cb);
     }
 }
 

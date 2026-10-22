@@ -89,6 +89,8 @@ name = "evee-root"
 version = "0.1.0"
 dependencies = [
  "evee",
+ "glam",
+ "imgui",
 ]
 
 [[package]]
@@ -120,6 +122,12 @@ dependencies = [
  "pin-project-lite",
  "slab",
 ]
+
+[[package]]
+name = "glam"
+version = "0.34.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc148d4ddd3930c52f9e5ae79b89805c6f07e9ff417e7b083e0348cea60a5aba"
 
 [[package]]
 name = "glfw"
@@ -392,11 +400,9 @@ name = "renderer"
 version = "0.1.0"
 dependencies = [
  "core",
- "glfw",
  "glow",
  "imgui",
  "imgui-glow-renderer",
- "raw-window-handle 0.6.2",
  "window",
 ]
 

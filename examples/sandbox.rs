@@ -30,7 +30,14 @@ impl Application for MyApplication {
     }
 
     fn create_layers(&self, window: Rc<RefCell<Box<dyn Window>>>) -> Vec<Box<dyn Layer>> {
-        let imgui_layer = Box::new(ImGuiLayer::new(window));
+        let mut imgui_layer = Box::new(ImGuiLayer::new(window));
+
+        let cb = Box::new(|imgui: &mut imgui::Ui| {
+            imgui.show_demo_window(&mut true);
+        });
+
+        imgui_layer.add_ui_callback(cb);
+
         vec![imgui_layer]
     }
 }
