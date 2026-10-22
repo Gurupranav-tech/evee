@@ -23,6 +23,7 @@ pub trait Window: HasDisplayHandle + HasWindowHandle + Input {
     fn set_vsync(&mut self, enabled: bool);
     fn is_vsync(&self) -> bool;
     fn window_props(&self) -> &WindowProps;
+    fn get_framebuffer_size(&self) -> (i32, i32);
 
     fn window_type(&self) -> &str {
         ""

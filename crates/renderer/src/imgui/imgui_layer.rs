@@ -122,6 +122,17 @@ impl Layer for ImGuiLayer {
         };
         let io = imgui.io_mut();
 
+        let window = self.window.borrow();
+        let width = window.get_width();
+        let height = window.get_height();
+        io.display_size = [width as f32, height as f32];
+
+        let (fb_w, fb_h) = window.get_framebuffer_size();
+        if width > 0 && height > 0 {
+            io.display_framebuffer_scale =
+                [fb_w as f32 / width as f32, fb_h as f32 / height as f32];
+        }
+
         match event {
             EventCategory::EventCategoryMouse(mouse_event) => match mouse_event {
                 MouseEvent::MouseMoveEvent(x, y) => io.add_mouse_pos_event([*x, *y]),

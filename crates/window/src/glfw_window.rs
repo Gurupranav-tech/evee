@@ -116,7 +116,15 @@ impl Window for GLFWWindow {
                     })
                 });
 
-                unsafe { gl.enable(glow::DEPTH_TEST) };
+                unsafe {
+                    gl.enable(glow::DEPTH_TEST);
+                    gl.viewport(
+                        0,
+                        0,
+                        glfw_window.window_props.width as i32,
+                        glfw_window.window_props.height as i32,
+                    );
+                }
 
                 glfw_window.gl = Some(gl);
             }
@@ -149,8 +157,13 @@ impl Window for GLFWWindow {
                 ) = &evee_event
                 {
                     self.window_props.width = *width;
-
                     self.window_props.height = *height;
+
+                    if let Some(ref gl) = self.gl {
+                        unsafe {
+                            gl.viewport(0, 0, *width as i32, *height as i32);
+                        }
+                    }
                 }
 
                 if let EventCategory::EventCategoryKeyboard(event) = &evee_event {
@@ -221,6 +234,10 @@ impl Window for GLFWWindow {
 
     fn is_vsync(&self) -> bool {
         self.vsync
+    }
+
+    fn get_framebuffer_size(&self) -> (i32, i32) {
+        self.window.get_framebuffer_size()
     }
 }
 
