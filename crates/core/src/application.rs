@@ -13,7 +13,7 @@ pub trait Application {
         vec![]
     }
 
-    fn create_overlays(&self) -> Vec<Box<dyn Layer>> {
+    fn create_overlays(&self, _window: Rc<RefCell<Box<dyn Window>>>) -> Vec<Box<dyn Layer>> {
         vec![]
     }
 }
@@ -71,7 +71,7 @@ impl Evee {
             self.layer_stack.push_layer(layer);
         }
 
-        for overlay in self.app.create_overlays() {
+        for overlay in self.app.create_overlays(Rc::clone(&self.window)) {
             self.layer_stack.push_overlay(overlay);
         }
 
@@ -90,7 +90,7 @@ impl Evee {
             self.window_event();
 
             for layer in &mut self.layer_stack.layers {
-                layer.on_update();
+                layer.on_update(self.window.borrow().as_ref());
             }
         }
 

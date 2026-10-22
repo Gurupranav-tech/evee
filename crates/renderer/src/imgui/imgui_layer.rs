@@ -1,11 +1,16 @@
 use core::{
     GPUContext::{self},
-    Layer, error,
+    Input, Layer, error,
+    event::{
+        MouseEvent,
+        event::{EventCategory, KeyEvent},
+    },
     window::Window,
 };
 use std::{cell::RefCell, rc::Rc, time::Instant};
 
 use imgui::Context as ImGuiContext;
+use imgui::Key;
 use imgui_glow_renderer::{Renderer, SimpleTextureMap};
 use window::glfw_window::GLFWWindow;
 
@@ -39,7 +44,6 @@ impl Layer for ImGuiLayer {
 
         let io = imgui.io_mut();
         io.config_flags.insert(imgui::ConfigFlags::DOCKING_ENABLE);
-        io.config_flags.insert(imgui::ConfigFlags::VIEWPORTS_ENABLE);
 
         io.display_size = [
             self.window.borrow().window_props().width as f32,
@@ -83,7 +87,7 @@ impl Layer for ImGuiLayer {
         self.gl = None;
     }
 
-    fn on_update(&mut self) {
+    fn on_update(&mut self, _input_manager: &dyn Input) {
         let (Some(imgui), Some(renderer), Some(gl)) = (
             self.imgui.as_mut(),
             self.glow_renderer.as_mut(),
@@ -105,10 +109,163 @@ impl Layer for ImGuiLayer {
         ui.show_demo_window(&mut true);
 
         let draw_data = imgui.render();
-        renderer
-            .render(&**gl, &self.texture_map, draw_data)
-            .expect("imgui render failed");
+        if draw_data.draw_lists_count() > 0 {
+            renderer
+                .render(gl.as_ref(), &self.texture_map, draw_data)
+                .expect("imgui render failed");
+        }
     }
 
-    fn on_event(&mut self, event: &mut core::event::event::EventCategory) {}
+    fn on_event(&mut self, event: &mut core::event::event::EventCategory) {
+        let Some(imgui) = self.imgui.as_mut() else {
+            return;
+        };
+        let io = imgui.io_mut();
+
+        match event {
+            EventCategory::EventCategoryMouse(mouse_event) => match mouse_event {
+                MouseEvent::MouseMoveEvent(x, y) => io.add_mouse_pos_event([*x, *y]),
+                MouseEvent::MouseButtonPressedEvent(button) => {
+                    if let Some(imgui_button) = translate_mouse_button(*button) {
+                        io.add_mouse_button_event(imgui_button, true);
+                    }
+                }
+                MouseEvent::MouseButtonReleaseEvent(button) => {
+                    if let Some(imgui_button) = translate_mouse_button(*button) {
+                        io.add_mouse_button_event(imgui_button, false);
+                    }
+                }
+                MouseEvent::MouseScrollEvent(x_offset, y_offset) => {
+                    io.add_mouse_wheel_event([*x_offset, *y_offset]);
+                }
+            },
+            EventCategory::EventCategoryKeyboard(key_event) => match key_event {
+                KeyEvent::KeyPressedEvent(key_code, _repeat) => {
+                    if let Some(key) = glfw_key_to_imgui(*key_code) {
+                        io.add_key_event(key, true);
+                    }
+                    if let Ok(c) = u8::try_from(*key_code) {
+                        let ch = c as char;
+                        if !ch.is_control() {
+                            io.add_input_character(ch);
+                        }
+                    }
+                }
+                KeyEvent::KeyReleaseEvent(key_code) => {
+                    if let Some(key) = glfw_key_to_imgui(*key_code) {
+                        io.add_key_event(key, false);
+                    }
+                }
+            },
+            EventCategory::EventCategoryApplication(app_event) => match app_event {
+                core::event::event::ApplicationEvent::WindowResizeEvent(width, height) => {
+                    io.display_size = [*width as f32, *height as f32];
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+}
+
+fn translate_mouse_button(button: u32) -> Option<imgui::MouseButton> {
+    match button {
+        0 => Some(imgui::MouseButton::Left),
+        1 => Some(imgui::MouseButton::Right),
+        2 => Some(imgui::MouseButton::Middle),
+        3 => Some(imgui::MouseButton::Extra1),
+        4 => Some(imgui::MouseButton::Extra2),
+        _ => None,
+    }
+}
+
+fn glfw_key_to_imgui(glfw_key: u32) -> Option<Key> {
+    match glfw_key {
+        // Modifiers
+        340 | 344 => Some(Key::ModShift),
+        341 | 345 => Some(Key::ModCtrl),
+        342 | 346 => Some(Key::ModAlt),
+        343 | 347 => Some(Key::ModSuper),
+
+        // Navigation & Editing
+        256 => Some(Key::Escape),
+        257 | 258 => Some(Key::Enter),
+        259 => Some(Key::Backspace),
+        260 => Some(Key::Insert),
+        261 => Some(Key::Delete),
+        262 => Some(Key::RightArrow),
+        263 => Some(Key::LeftArrow),
+        264 => Some(Key::DownArrow),
+        265 => Some(Key::UpArrow),
+        266 => Some(Key::PageUp),
+        267 => Some(Key::PageDown),
+        268 => Some(Key::Home),
+        269 => Some(Key::End),
+        32 => Some(Key::Space),
+
+        // Alpha Keys (A-Z)
+        65..=90 => match glfw_key {
+            65 => Some(Key::A),
+            66 => Some(Key::B),
+            67 => Some(Key::C),
+            68 => Some(Key::D),
+            69 => Some(Key::E),
+            70 => Some(Key::F),
+            71 => Some(Key::G),
+            72 => Some(Key::H),
+            73 => Some(Key::I),
+            74 => Some(Key::J),
+            75 => Some(Key::K),
+            76 => Some(Key::L),
+            77 => Some(Key::M),
+            78 => Some(Key::N),
+            79 => Some(Key::O),
+            80 => Some(Key::P),
+            81 => Some(Key::Q),
+            82 => Some(Key::R),
+            83 => Some(Key::S),
+            84 => Some(Key::T),
+            85 => Some(Key::U),
+            86 => Some(Key::V),
+            87 => Some(Key::W),
+            88 => Some(Key::X),
+            89 => Some(Key::Y),
+            90 => Some(Key::Z),
+            _ => None,
+        },
+
+        // Number Keys (0-9)
+        48..=57 => match glfw_key {
+            48 => Some(Key::Alpha0),
+            49 => Some(Key::Alpha1),
+            50 => Some(Key::Alpha2),
+            51 => Some(Key::Alpha3),
+            52 => Some(Key::Alpha4),
+            53 => Some(Key::Alpha5),
+            54 => Some(Key::Alpha6),
+            55 => Some(Key::Alpha7),
+            56 => Some(Key::Alpha8),
+            57 => Some(Key::Alpha9),
+            _ => None,
+        },
+
+        // Function Keys (F1 - F12)
+        290..=301 => match glfw_key {
+            290 => Some(Key::F1),
+            291 => Some(Key::F2),
+            292 => Some(Key::F3),
+            293 => Some(Key::F4),
+            294 => Some(Key::F5),
+            295 => Some(Key::F6),
+            296 => Some(Key::F7),
+            297 => Some(Key::F8),
+            298 => Some(Key::F9),
+            299 => Some(Key::F10),
+            300 => Some(Key::F11),
+            301 => Some(Key::F12),
+            _ => None,
+        },
+
+        _ => None,
+    }
 }

@@ -1,5 +1,6 @@
 use evee::core::{
-    Application, Evee, GPUContext, Layer,
+    Application, Evee, GPUContext, Layer, info,
+    input::KeyCode,
     window::{Window, WindowProps},
 };
 use evee::renderer::ImGuiLayer;
@@ -7,6 +8,26 @@ use evee::window::glfw_window::GLFWWindow;
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
+
+struct MyLayer;
+
+impl Layer for MyLayer {
+    fn on_attach(&mut self) {
+        info!("My Layer attached");
+    }
+
+    fn on_detach(&mut self) {
+        info!("My Layer detached");
+    }
+
+    fn on_update(&mut self, input_manager: &dyn evee::core::Input) {
+        if input_manager.is_keypressed(KeyCode::Tab) {
+            info!("Tab is being pressed");
+        }
+    }
+
+    fn on_event(&mut self, _event: &mut evee::core::event::event::EventCategory) {}
+}
 
 struct MyApplication {
     width: u32,
@@ -31,7 +52,8 @@ impl Application for MyApplication {
 
     fn create_layers(&self, window: Rc<RefCell<Box<dyn Window>>>) -> Vec<Box<dyn Layer>> {
         let imgui_layer = Box::new(ImGuiLayer::new(window));
-        vec![imgui_layer]
+        let my_layer = Box::new(MyLayer);
+        vec![imgui_layer, my_layer]
     }
 }
 

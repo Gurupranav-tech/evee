@@ -1,13 +1,21 @@
 use core::{
-    GPUContext,
-    event::event::EventCategory,
-    info, warn,
+    GPUContext, Input,
+    event::{
+        MouseEvent,
+        event::{
+            EventCategory,
+            KeyEvent::{self, KeyReleaseEvent},
+        },
+    },
+    info,
+    input::{KeyCode, MouseButton},
+    warn,
     window::{Window, WindowProps},
 };
 use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
 use glow::HasContext;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
-use std::{error::Error, rc::Rc};
+use std::{collections::HashSet, error::Error, rc::Rc};
 
 pub struct GLFWWindow {
     window_props: WindowProps,
@@ -18,6 +26,8 @@ pub struct GLFWWindow {
     glfw: Glfw,
     window: PWindow,
     events: GlfwReceiver<(f64, WindowEvent)>,
+    key_pressed: HashSet<u32>,
+    mousebtn_pressed: HashSet<u32>,
 
     // Graphics Context
     gl: Option<Rc<glow::Context>>,
@@ -36,6 +46,20 @@ impl HasDisplayHandle for GLFWWindow {
         &self,
     ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
         self.window.display_handle()
+    }
+}
+
+impl Input for GLFWWindow {
+    fn is_keypressed(&self, _keycode: KeyCode) -> bool {
+        self.key_pressed.contains(&(_keycode as u32))
+    }
+
+    fn get_mouse_position(&self) -> (f64, f64) {
+        self.window.get_cursor_pos()
+    }
+
+    fn is_mousebtn_pressed(&self, _btn: MouseButton) -> bool {
+        self.mousebtn_pressed.contains(&(_btn as u32))
     }
 }
 
@@ -62,6 +86,8 @@ impl Window for GLFWWindow {
         window.set_cursor_pos_polling(true);
         window.set_mouse_button_polling(true);
         window.set_focus_polling(true);
+        window.set_scroll_polling(true);
+        window.set_char_polling(true);
 
         info!(
             "Created GLFW Window: {} {}x{} with context {:?}",
@@ -76,6 +102,8 @@ impl Window for GLFWWindow {
             window,
             events: event,
             gl: None,
+            key_pressed: HashSet::new(),
+            mousebtn_pressed: HashSet::new(),
         });
 
         match &glfw_window.window_props.context {
@@ -125,6 +153,29 @@ impl Window for GLFWWindow {
                     self.window_props.height = *height;
                 }
 
+                if let EventCategory::EventCategoryKeyboard(event) = &evee_event {
+                    match event {
+                        KeyEvent::KeyPressedEvent(keycode, _) => {
+                            self.key_pressed.insert(*keycode);
+                        }
+                        KeyReleaseEvent(keycode) => {
+                            self.key_pressed.remove(keycode);
+                        }
+                    }
+                }
+
+                if let EventCategory::EventCategoryMouse(event) = &evee_event {
+                    match event {
+                        MouseEvent::MouseButtonPressedEvent(btn) => {
+                            self.mousebtn_pressed.insert(*btn);
+                        }
+                        MouseEvent::MouseButtonReleaseEvent(btn) => {
+                            self.mousebtn_pressed.remove(btn);
+                        }
+                        _ => {}
+                    }
+                }
+
                 if let Some(callback) = self.event_callback.as_mut() {
                     callback(evee_event);
                 }
@@ -134,6 +185,12 @@ impl Window for GLFWWindow {
         match self.window_props.context {
             GPUContext::Opengl => {
                 self.window.swap_buffers();
+                let Some(ref mut gl) = self.gl else { return };
+
+                unsafe {
+                    gl.clear_color(0.0, 0.0, 0.0, 1.0);
+                    gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
+                }
             }
 
             GPUContext::None => {}

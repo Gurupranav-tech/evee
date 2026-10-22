@@ -1,6 +1,6 @@
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
-use crate::{GPUContext, event::event::EventCategory};
+use crate::{GPUContext, Input, event::event::EventCategory};
 use std::{any::Any, error::Error};
 
 pub struct WindowProps {
@@ -10,7 +10,7 @@ pub struct WindowProps {
     pub context: GPUContext,
 }
 
-pub trait Window: HasDisplayHandle + HasWindowHandle {
+pub trait Window: HasDisplayHandle + HasWindowHandle + Input {
     fn new(props: WindowProps) -> Result<Box<dyn Window>, Box<dyn Error>>
     where
         Self: Sized;

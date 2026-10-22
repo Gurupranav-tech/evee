@@ -1,9 +1,9 @@
-use crate::event::event::EventCategory;
+use crate::{Input, event::event::EventCategory};
 
 pub trait Layer {
     fn on_attach(&mut self);
     fn on_detach(&mut self);
-    fn on_update(&mut self);
+    fn on_update(&mut self, input_manager: &dyn Input);
     fn on_event(&mut self, event: &mut EventCategory);
 }
 
