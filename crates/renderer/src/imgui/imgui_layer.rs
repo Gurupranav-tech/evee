@@ -14,6 +14,8 @@ use imgui::Key;
 use imgui_glow_renderer::{Renderer, SimpleTextureMap};
 use window::glfw_window::GLFWWindow;
 
+use crate::ImGuiAddOn;
+
 pub struct ImGuiLayer {
     window: Rc<RefCell<Box<dyn Window>>>,
     imgui: Option<ImGuiContext>,
@@ -23,7 +25,7 @@ pub struct ImGuiLayer {
     gl: Option<Rc<glow::Context>>,
 
     // callbacks
-    ui_callbacks: Vec<Box<dyn FnMut(&mut imgui::Ui)>>,
+    ui_callbacks: Vec<Box<dyn ImGuiAddOn>>,
 }
 
 impl ImGuiLayer {
@@ -118,7 +120,7 @@ impl Layer for ImGuiLayer {
         let ui = imgui.new_frame();
 
         for cb in self.ui_callbacks.iter_mut() {
-            cb(ui);
+            cb.render(ui);
         }
 
         let draw_data = imgui.render();
@@ -193,7 +195,7 @@ impl Layer for ImGuiLayer {
 }
 
 impl ImGuiLayer {
-    pub fn add_ui_callback(&mut self, cb: Box<dyn FnMut(&mut imgui::Ui)>) {
+    pub fn add_ui_callback(&mut self, cb: Box<dyn ImGuiAddOn>) {
         self.ui_callbacks.push(cb);
     }
 }

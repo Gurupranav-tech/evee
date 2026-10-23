@@ -1,12 +1,23 @@
-use evee::core::{
-    Application, Evee, GPUContext, Layer,
-    window::{Window, WindowProps},
-};
 use evee::renderer::ImGuiLayer;
 use evee::window::glfw_window::GLFWWindow;
+use evee::{
+    core::{
+        Application, Evee, GPUContext, Layer,
+        window::{Window, WindowProps},
+    },
+    renderer::ImGuiAddOn,
+};
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
+
+struct Addon;
+
+impl ImGuiAddOn for Addon {
+    fn render(&mut self, ui: &mut imgui::Ui) {
+        ui.show_demo_window(&mut true);
+    }
+}
 
 struct MyApplication {
     width: u32,
@@ -32,11 +43,7 @@ impl Application for MyApplication {
     fn create_layers(&self, window: Rc<RefCell<Box<dyn Window>>>) -> Vec<Box<dyn Layer>> {
         let mut imgui_layer = Box::new(ImGuiLayer::new(window));
 
-        let cb = Box::new(|imgui: &mut imgui::Ui| {
-            imgui.show_demo_window(&mut true);
-        });
-
-        imgui_layer.add_ui_callback(cb);
+        imgui_layer.add_ui_callback(Box::new(Addon));
 
         vec![imgui_layer]
     }
