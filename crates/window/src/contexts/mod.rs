@@ -1,1 +1,1 @@
-pub mod opengl_context;
+pub mod glfw;

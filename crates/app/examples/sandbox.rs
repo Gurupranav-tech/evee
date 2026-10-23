@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use evee::renderer::ImGuiLayer;
 use evee::window::glfw_window::GLFWWindow;
 use evee::{
@@ -14,9 +15,7 @@ use std::rc::Rc;
 struct Addon;
 
 impl ImGuiAddOn for Addon {
-    fn render(&mut self, ui: &mut imgui::Ui) {
-        ui.show_demo_window(&mut true);
-    }
+    fn render(&mut self, ui: &mut imgui::Ui) {}
 }
 
 struct MyApplication {

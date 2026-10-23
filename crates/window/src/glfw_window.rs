@@ -11,7 +11,7 @@ use glfw::{Glfw, GlfwReceiver, PWindow, WindowEvent};
 use std::cell::RefCell;
 use std::{collections::HashSet, error::Error, rc::Rc};
 
-use crate::contexts::opengl_context::OpenglContext;
+use crate::contexts::glfw::opengl_context::OpenglContext;
 
 pub struct GLFWWindow {
     window_props: WindowProps,
