@@ -8,6 +8,11 @@ pub struct WindowProps {
     pub context: GPUContext,
 }
 
+pub enum WindowType {
+    GLFW,
+    None,
+}
+
 pub trait Window: Input {
     fn new(props: WindowProps) -> Result<Box<dyn Window>, Box<dyn Error>>
     where
@@ -23,8 +28,8 @@ pub trait Window: Input {
     fn window_props(&self) -> &WindowProps;
     fn get_framebuffer_size(&self) -> (i32, i32);
 
-    fn window_type(&self) -> &str {
-        ""
+    fn window_type(&self) -> WindowType {
+        WindowType::None
     }
     fn as_any(&self) -> &dyn Any;
 }

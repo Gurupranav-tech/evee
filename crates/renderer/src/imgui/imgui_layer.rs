@@ -5,7 +5,7 @@ use core::{
         MouseEvent,
         event::{EventCategory, KeyEvent},
     },
-    window::Window,
+    window::{Window, WindowType},
 };
 use std::{cell::RefCell, rc::Rc, time::Instant};
 
@@ -65,7 +65,7 @@ impl Layer for ImGuiLayer {
 
         match self.window.borrow().window_props().context {
             GPUContext::Opengl => {
-                if self.window.borrow().window_type() != "GLFW" {
+                if !matches!(self.window.borrow().window_type(), WindowType::GLFW) {
                     error!("ImGui Layer not implemented for this window");
                     panic!("ImGui Layer not implemented for this window");
                 }

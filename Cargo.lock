@@ -640,6 +640,7 @@ dependencies = [
  "core",
  "glfw",
  "glow",
+ "imgui",
  "num-traits",
 ]
 

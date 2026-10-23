@@ -5,7 +5,7 @@ use core::event::event::{
 };
 use core::graphics::GraphicsContext;
 use core::input::{KeyCode, MouseButton};
-use core::window::{Window, WindowProps};
+use core::window::{Window, WindowProps, WindowType};
 use core::{GPUContext, Input, info, warn};
 use glfw::{Glfw, GlfwReceiver, PWindow, WindowEvent};
 use std::cell::RefCell;
@@ -105,8 +105,8 @@ impl Window for GLFWWindow {
         &self.window_props
     }
 
-    fn window_type(&self) -> &str {
-        "GLFW"
+    fn window_type(&self) -> WindowType {
+        WindowType::GLFW
     }
 
     fn as_any(&self) -> &dyn std::any::Any {

@@ -7,9 +7,6 @@ use glow::{Context as GlowContext, HasContext};
 pub struct OpenglContext {
     window: Rc<RefCell<PWindow>>,
     gl: Option<Rc<GlowContext>>,
-
-    vao: Option<glow::VertexArray>,
-    vbo: Option<glow::Buffer>,
 }
 
 impl GraphicsContext for OpenglContext {
@@ -27,30 +24,6 @@ impl GraphicsContext for OpenglContext {
         unsafe {
             gl.enable(glow::DEPTH_TEST);
             gl.viewport(0, 0, width, height);
-
-            self.vao = gl.create_vertex_array().ok();
-            self.vbo = gl.create_buffer().ok();
-
-            gl.bind_vertex_array(self.vao);
-            gl.bind_buffer(glow::ARRAY_BUFFER, self.vbo);
-
-            let vertices: [f32; 9] = [-0.5, -0.5, 0.0, 0.5, 0.5, 0.0, 0.5, -0.5, 0.0];
-
-            let u8_vertices: &[u8] = std::slice::from_raw_parts(
-                vertices.as_ptr() as *const u8,
-                vertices.len() * std::mem::size_of::<f32>(),
-            );
-            gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, u8_vertices, glow::STATIC_DRAW);
-
-            gl.enable_vertex_attrib_array(0);
-            gl.vertex_attrib_pointer_f32(
-                0,                                     // layout (location = 0)
-                3,                                     // Size (3 coordinates per vertex: X, Y, Z)
-                glow::FLOAT,                           // Data type
-                false,                                 // Normalized
-                3 * std::mem::size_of::<f32>() as i32, // Stride (byte size of single vertex context)
-                0,                                     // Offset
-            );
         }
 
         self.gl = Some(gl);
@@ -63,13 +36,6 @@ impl GraphicsContext for OpenglContext {
         unsafe {
             gl.clear_color(0.0, 0.0, 0.0, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-
-            gl.bind_vertex_array(self.vao);
-            gl.draw_arrays(
-                glow::TRIANGLES, // Primitive type
-                0,               // Starting array index
-                3,               // Number of vertices to process
-            );
         }
     }
 
@@ -92,12 +58,7 @@ impl GraphicsContext for OpenglContext {
 
 impl OpenglContext {
     pub fn new(window: Rc<RefCell<PWindow>>) -> Self {
-        Self {
-            window,
-            gl: None,
-            vao: None,
-            vbo: None,
-        }
+        Self { window, gl: None }
     }
 
     pub fn gl(&self) -> Option<Rc<GlowContext>> {
