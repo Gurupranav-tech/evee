@@ -1,21 +1,9 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/core",
-    "crates/app"
-, "crates/window", "crates/renderer"]
+members = ["crates/core", "crates/app", "crates/window", "crates/renderer"]
+default-members = ["crates/app"]
 
 [workspace.dependencies]
 glam = "0.34.1"
 raw-window-handle = "0.6"
-imgui = { version = "0.12.0", features = ["docking"] }
-
-[package]
-name = "evee-root"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-evee = { path = "crates/app" }
-glam = "0.34.1"
 imgui = { version = "0.12.0", features = ["docking"] }

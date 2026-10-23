@@ -7,3 +7,5 @@ edition = "2024"
 core = { path = "../core" }
 window = { path = "../window" }
 renderer = { path = "../renderer" }
+glam = { workspace = true }
+imgui = { workspace = true }

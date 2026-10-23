@@ -80,17 +80,10 @@ name = "evee"
 version = "0.1.0"
 dependencies = [
  "core",
- "renderer",
- "window",
-]
-
-[[package]]
-name = "evee-root"
-version = "0.1.0"
-dependencies = [
- "evee",
  "glam",
  "imgui",
+ "renderer",
+ "window",
 ]
 
 [[package]]
