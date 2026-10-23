@@ -3,6 +3,7 @@ mod logger;
 pub mod application;
 pub mod event;
 pub mod gpu_context;
+pub mod graphics;
 pub mod input;
 pub mod layer_stack;
 pub mod window;

@@ -8,4 +8,3 @@ glfw = { version = "0.55" }
 core = { path = "../core" } # Depends on core for events & logging
 glow = "0.13"
 num-traits = "0.2"
-raw-window-handle = { workspace = true }

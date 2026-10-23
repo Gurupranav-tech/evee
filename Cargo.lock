@@ -70,7 +70,6 @@ dependencies = [
 name = "core"
 version = "0.1.0"
 dependencies = [
- "raw-window-handle 0.6.2",
  "tracing",
  "tracing-subscriber",
 ]
@@ -642,7 +641,6 @@ dependencies = [
  "glfw",
  "glow",
  "num-traits",
- "raw-window-handle 0.6.2",
 ]
 
 [[package]]

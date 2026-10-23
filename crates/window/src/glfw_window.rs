@@ -1,21 +1,17 @@
-use core::{
-    GPUContext, Input,
-    event::{
-        MouseEvent,
-        event::{
-            EventCategory,
-            KeyEvent::{self, KeyReleaseEvent},
-        },
-    },
-    info,
-    input::{KeyCode, MouseButton},
-    warn,
-    window::{Window, WindowProps},
+use core::event::MouseEvent;
+use core::event::event::{
+    EventCategory,
+    KeyEvent::{self, KeyReleaseEvent},
 };
-use glfw::{Context, Glfw, GlfwReceiver, PWindow, WindowEvent};
-use glow::HasContext;
-use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
+use core::graphics::GraphicsContext;
+use core::input::{KeyCode, MouseButton};
+use core::window::{Window, WindowProps};
+use core::{GPUContext, Input, info, warn};
+use glfw::{Glfw, GlfwReceiver, PWindow, WindowEvent};
+use std::cell::RefCell;
 use std::{collections::HashSet, error::Error, rc::Rc};
+
+use crate::contexts::opengl_context::OpenglContext;
 
 pub struct GLFWWindow {
     window_props: WindowProps,
@@ -24,29 +20,13 @@ pub struct GLFWWindow {
 
     // GLFW specific handles
     glfw: Glfw,
-    window: PWindow,
+    window: Rc<RefCell<PWindow>>,
     events: GlfwReceiver<(f64, WindowEvent)>,
     key_pressed: HashSet<u32>,
     mousebtn_pressed: HashSet<u32>,
 
     // Graphics Context
-    gl: Option<Rc<glow::Context>>,
-}
-
-impl HasWindowHandle for GLFWWindow {
-    fn window_handle(
-        &self,
-    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
-        self.window.window_handle()
-    }
-}
-
-impl HasDisplayHandle for GLFWWindow {
-    fn display_handle(
-        &self,
-    ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
-        self.window.display_handle()
-    }
+    graphics_context: Option<Box<dyn GraphicsContext>>,
 }
 
 impl Input for GLFWWindow {
@@ -55,7 +35,7 @@ impl Input for GLFWWindow {
     }
 
     fn get_mouse_position(&self) -> (f64, f64) {
-        self.window.get_cursor_pos()
+        self.window.borrow().get_cursor_pos()
     }
 
     fn is_mousebtn_pressed(&self, _btn: MouseButton) -> bool {
@@ -94,42 +74,28 @@ impl Window for GLFWWindow {
             props.title, props.width, props.height, props.context
         );
 
+        let window = Rc::new(RefCell::new(window));
+
         let mut glfw_window = Box::new(Self {
             window_props: props,
             vsync: false,
             event_callback: None,
             glfw,
-            window,
             events: event,
-            gl: None,
             key_pressed: HashSet::new(),
             mousebtn_pressed: HashSet::new(),
+            window,
+            graphics_context: None,
         });
 
         match &glfw_window.window_props.context {
-            core::GPUContext::Opengl => {
-                glfw_window.window.make_current();
-
-                let gl = Rc::new(unsafe {
-                    glow::Context::from_loader_function(|symbol| {
-                        glfw_window.window.get_proc_address(symbol) as *const _
-                    })
-                });
-
-                unsafe {
-                    gl.enable(glow::DEPTH_TEST);
-                    gl.viewport(
-                        0,
-                        0,
-                        glfw_window.window_props.width as i32,
-                        glfw_window.window_props.height as i32,
-                    );
-                }
-
-                glfw_window.gl = Some(gl);
+            GPUContext::Opengl => {
+                let mut context = OpenglContext::new(Rc::clone(&glfw_window.window));
+                context.init();
+                glfw_window.graphics_context = Some(Box::new(context));
             }
 
-            core::GPUContext::None => warn!("No GPU Context was choosen"),
+            GPUContext::None => warn!("No GPU Context was choosen"),
         };
 
         Ok(glfw_window)
@@ -159,10 +125,8 @@ impl Window for GLFWWindow {
                     self.window_props.width = *width;
                     self.window_props.height = *height;
 
-                    if let Some(ref gl) = self.gl {
-                        unsafe {
-                            gl.viewport(0, 0, *width as i32, *height as i32);
-                        }
+                    if let Some(ref graphics_context) = self.graphics_context {
+                        graphics_context.viewport_update(*width as i32, *height as i32);
                     }
                 }
 
@@ -195,19 +159,11 @@ impl Window for GLFWWindow {
             }
         }
 
-        match self.window_props.context {
-            GPUContext::Opengl => {
-                self.window.swap_buffers();
-                let Some(ref mut gl) = self.gl else { return };
+        let Some(grpahics_context) = &mut self.graphics_context else {
+            return;
+        };
 
-                unsafe {
-                    gl.clear_color(0.0, 0.0, 0.0, 1.0);
-                    gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-                }
-            }
-
-            GPUContext::None => {}
-        }
+        grpahics_context.swap_buffers();
     }
 
     fn get_width(&self) -> u32 {
@@ -237,7 +193,7 @@ impl Window for GLFWWindow {
     }
 
     fn get_framebuffer_size(&self) -> (i32, i32) {
-        self.window.get_framebuffer_size()
+        self.window.borrow().get_framebuffer_size()
     }
 }
 
@@ -298,6 +254,18 @@ impl GLFWWindow {
     }
 
     pub fn gl_context(&self) -> Option<Rc<glow::Context>> {
-        self.gl.clone()
+        let Some(grpahics_context) = &self.graphics_context else {
+            return None;
+        };
+
+        if let GPUContext::Opengl = grpahics_context.context_type() {
+            grpahics_context
+                .as_any()
+                .downcast_ref::<OpenglContext>()
+                .expect("Not a opengl context")
+                .gl()
+        } else {
+            None
+        }
     }
 }
