@@ -8,9 +8,10 @@ use evee::{
     },
     renderer::ImGuiAddOn,
 };
-use renderer::buffer::{IndexBuffer, VertexBuffer, create_indexbuffer, create_vertexbuffer};
+use renderer::buffer::{self, IndexBuffer, VertexBuffer};
 use renderer::glow::{self, HasContext};
 use renderer::shader::Shader;
+use renderer::vertex_array::{self, VertexArray};
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
@@ -36,26 +37,16 @@ const FRAGMENT: &str = r#"
 
 struct DummyLayer {
     shader: Shader,
-    vbo: Box<dyn VertexBuffer>,
-    ibo: Box<dyn IndexBuffer>,
-    vao: glow::VertexArray,
+    vbo: Rc<Box<dyn VertexBuffer>>,
+    ibo: Rc<Box<dyn IndexBuffer>>,
+    vao: Box<dyn VertexArray>,
     gl: Rc<renderer::glow::Context>,
 }
 
 impl Layer for DummyLayer {
     fn on_attach(&mut self) {
-        unsafe {
-            self.gl.bind_vertex_array(Some(self.vao));
-            self.gl.enable_vertex_attrib_array(0);
-            self.gl.vertex_attrib_pointer_f32(
-                0,
-                3,
-                glow::FLOAT,
-                false,
-                std::mem::size_of::<f32>() as i32,
-                0,
-            );
-        }
+        self.vao.add_vertexbuffer(Rc::clone(&self.vbo));
+        self.vao.add_indexbuffer(Rc::clone(&self.ibo));
     }
 
     fn on_detach(&mut self) {}
@@ -63,11 +54,11 @@ impl Layer for DummyLayer {
     fn on_update(&mut self, input_manager: &dyn core::Input) {
         self.shader.bind();
         unsafe {
-            self.gl.bind_vertex_array(Some(self.vao));
-            self.vbo.bind();
-            self.ibo.bind();
+            self.vao.bind();
+            // self.vbo.bind();
+            // self.ibo.bind();
             self.gl
-                .draw_elements(glow::TRIANGLES, self.ibo.count(), glow::UNSIGNED_INT, 0);
+                .draw_elements(glow::TRIANGLES, self.vao.count(), glow::UNSIGNED_INT, 0);
         }
     }
 
@@ -76,8 +67,8 @@ impl Layer for DummyLayer {
 
 impl DummyLayer {
     fn new(window: Rc<RefCell<Box<dyn Window>>>) -> Self {
-        let vertices: [f32; 9] = [-0.5, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0];
-        let indices: [u32; 3] = [0, 1, 2];
+        let vertices: [f32; 12] = [-0.5, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, -0.5, 0.0];
+        let indices: [u32; 6] = [0, 1, 2, 0, 1, 3];
 
         let gl = window
             .borrow()
@@ -87,17 +78,25 @@ impl DummyLayer {
             .gl_context()
             .expect("Need opengl");
 
-        let vertex_array = unsafe { gl.create_vertex_array().expect("Need vertex array") };
-        unsafe {
-            gl.bind_vertex_array(Some(vertex_array));
-        }
+        let buffer_layout = buffer::BufferLayout::new(vec![buffer::BufferElement::new(
+            "Position".into(),
+            buffer::ShaderDataType::Float3,
+            false,
+        )]);
+        core::info!("Buffer layout: {:?}", buffer_layout);
+
+        let mut vbo =
+            buffer::create_vertexbuffer(Rc::clone(&window), &vertices[..]).expect("Expected a vbo");
+        vbo.set_layout(buffer_layout);
 
         Self {
             shader: Shader::new(Rc::clone(&window), VERTEX, FRAGMENT).expect("Err"),
-            vbo: create_vertexbuffer(Rc::clone(&window), &vertices[..]).expect("Expected a vbo"),
-            ibo: create_indexbuffer(Rc::clone(&window), &indices[..]).expect("Expected ebo"),
+            vbo: Rc::new(vbo),
+            ibo: Rc::new(
+                buffer::create_indexbuffer(Rc::clone(&window), &indices[..]).expect("Expected ebo"),
+            ),
             gl,
-            vao: vertex_array,
+            vao: vertex_array::create_vertexarray(Rc::clone(&window)).expect("Expected vao"),
         }
     }
 }

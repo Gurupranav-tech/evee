@@ -1,11 +1,12 @@
 use std::{error::Error, rc::Rc};
 
-use crate::buffer::{IndexBuffer, VertexBuffer};
+use crate::buffer::{BufferLayout, IndexBuffer, VertexBuffer};
 use glow::{Context, HasContext};
 
 pub struct OpenglVertexBuffer {
     gl: Rc<Context>,
     render_id: glow::Buffer,
+    buffer_layout: Option<BufferLayout>,
 }
 
 impl VertexBuffer for OpenglVertexBuffer {
@@ -20,6 +21,14 @@ impl VertexBuffer for OpenglVertexBuffer {
         unsafe {
             self.gl.bind_buffer(glow::ARRAY_BUFFER, None);
         }
+    }
+
+    fn set_layout(&mut self, buffer_layout: BufferLayout) {
+        self.buffer_layout = Some(buffer_layout);
+    }
+
+    fn get_layout(&self) -> Option<&BufferLayout> {
+        self.buffer_layout.as_ref()
     }
 }
 
@@ -36,7 +45,11 @@ impl OpenglVertexBuffer {
             gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertices, glow::STATIC_DRAW);
         }
 
-        Ok(Self { gl, render_id })
+        Ok(Self {
+            gl,
+            render_id,
+            buffer_layout: None,
+        })
     }
 }
 
