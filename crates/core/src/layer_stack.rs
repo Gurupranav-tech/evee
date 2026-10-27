@@ -5,6 +5,10 @@ pub trait Layer {
     fn on_detach(&mut self);
     fn on_update(&mut self, input_manager: &dyn Input);
     fn on_event(&mut self, event: &mut EventCategory);
+
+    fn name(&self) -> &str {
+        "None"
+    }
 }
 
 pub struct LayerStack {
@@ -25,9 +29,14 @@ impl LayerStack {
         self.layers.push(layer);
     }
 
-    pub fn push_overlay(&mut self, overlay: Box<dyn Layer>) {
+    pub fn push_overlay(&mut self, mut overlay: Box<dyn Layer>) {
+        overlay.on_attach();
         self.layers.insert(self.layer_index, overlay);
         self.layer_index += 1;
+    }
+
+    pub fn size(&self) -> usize {
+        self.layers.len()
     }
 }
 

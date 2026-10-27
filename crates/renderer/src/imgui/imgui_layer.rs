@@ -118,6 +118,7 @@ impl Layer for ImGuiLayer {
         self.last_frame = now;
 
         let ui = imgui.new_frame();
+        let _ = ui.dockspace_over_main_viewport();
 
         for cb in self.ui_callbacks.iter_mut() {
             cb.render(ui);
@@ -129,6 +130,10 @@ impl Layer for ImGuiLayer {
                 .render(gl.as_ref(), &self.texture_map, draw_data)
                 .expect("imgui render failed");
         }
+    }
+
+    fn name(&self) -> &str {
+        "Imgui layer"
     }
 
     fn on_event(&mut self, event: &mut core::event::event::EventCategory) {

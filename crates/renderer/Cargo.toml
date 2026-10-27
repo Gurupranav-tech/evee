@@ -9,3 +9,4 @@ window = { path = "../window" }
 glow = "0.13"
 imgui = { workspace = true }
 imgui-glow-renderer = "0.12.0"
+glam = { workspace = true }

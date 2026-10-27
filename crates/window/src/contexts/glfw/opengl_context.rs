@@ -31,12 +31,6 @@ impl GraphicsContext for OpenglContext {
 
     fn swap_buffers(&mut self) {
         self.window.borrow_mut().swap_buffers();
-        let Some(ref mut gl) = self.gl else { return };
-
-        unsafe {
-            gl.clear_color(0.0, 0.0, 0.0, 1.0);
-            gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-        }
     }
 
     fn viewport_update(&self, width: i32, height: i32) {

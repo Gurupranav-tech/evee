@@ -70,6 +70,7 @@ dependencies = [
 name = "core"
 version = "0.1.0"
 dependencies = [
+ "glam",
  "tracing",
  "tracing-subscriber",
 ]
@@ -392,6 +393,7 @@ name = "renderer"
 version = "0.1.0"
 dependencies = [
  "core",
+ "glam",
  "glow",
  "imgui",
  "imgui-glow-renderer",

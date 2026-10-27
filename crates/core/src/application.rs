@@ -1,10 +1,5 @@
-use crate::{
-    event::event::{ApplicationEvent, EventCategory},
-    layer_stack::{Layer, LayerStack},
-    logger::init_logger,
-    window::Window,
-};
-use std::{cell::RefCell, error::Error, rc::Rc, sync::mpsc};
+use crate::{layer_stack::Layer, window::Window};
+use std::{cell::RefCell, error::Error, rc::Rc};
 
 pub trait Application {
     fn create_window(&mut self) -> Result<Rc<RefCell<Box<dyn Window>>>, Box<dyn Error>>;
@@ -16,84 +11,8 @@ pub trait Application {
     fn create_overlays(&self, _window: Rc<RefCell<Box<dyn Window>>>) -> Vec<Box<dyn Layer>> {
         vec![]
     }
-}
 
-pub struct Evee {
-    app: Box<dyn Application>,
-    running: bool,
+    fn clear(&self) {}
 
-    // Window events
-    window: Rc<RefCell<Box<dyn Window>>>,
-    event_sender: mpsc::Sender<EventCategory>,
-    event_receiver: mpsc::Receiver<EventCategory>,
-
-    // Layer Stack
-    layer_stack: LayerStack,
-}
-
-impl Evee {
-    pub fn new(mut app: Box<dyn Application>) -> Result<Self, Box<dyn Error>> {
-        init_logger();
-
-        let window = app.create_window()?;
-
-        let (event_sender, event_receiver) = mpsc::channel();
-
-        Ok(Self {
-            app,
-            window,
-            running: true,
-            event_receiver,
-            event_sender,
-            layer_stack: LayerStack::new(),
-        })
-    }
-
-    fn window_event(&mut self) {
-        while let Ok(mut event_category) = self.event_receiver.try_recv() {
-            match event_category {
-                EventCategory::EventCategoryApplication(ApplicationEvent::WindowCloseEvent) => {
-                    self.running = false
-                }
-                _ => {
-                    for layer in self.layer_stack.layers.iter_mut().rev() {
-                        layer.on_event(&mut event_category);
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn init(mut self) -> Self {
-        let sender = self.event_sender.clone();
-
-        for layer in self.app.create_layers(Rc::clone(&self.window)) {
-            self.layer_stack.push_layer(layer);
-        }
-
-        for overlay in self.app.create_overlays(Rc::clone(&self.window)) {
-            self.layer_stack.push_overlay(overlay);
-        }
-
-        (&mut self).window.borrow_mut().set_event_callback(Box::new(
-            move |event_category: EventCategory| {
-                sender.send(event_category).expect("Event System broken");
-            },
-        ));
-
-        self
-    }
-
-    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
-        while self.running {
-            self.window.borrow_mut().on_update();
-            self.window_event();
-
-            for layer in &mut self.layer_stack.layers {
-                layer.on_update(self.window.borrow().as_ref());
-            }
-        }
-
-        Ok(())
-    }
+    fn set_clear_color(&self, _color: glam::Vec4) {}
 }

@@ -1,4 +1,4 @@
-mod logger;
+pub mod logger;
 
 pub mod application;
 pub mod event;
@@ -9,7 +9,6 @@ pub mod layer_stack;
 pub mod window;
 
 pub use application::Application;
-pub use application::Evee;
 pub use gpu_context::GPUContext;
 pub use input::Input;
 pub use layer_stack::Layer;
